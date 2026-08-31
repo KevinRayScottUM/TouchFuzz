@@ -1,0 +1,44 @@
+#!/system/bin/sh
+
+MODDIR=/data/adb/modules/touchfuzz
+CONFIG="$MODDIR/config.conf"
+HELPER="$MODDIR/system/bin/fuzzctl"
+axis_fuzz() { "$HELPER" "$1" "$2" 2>/dev/null | sed -n 's/.*fuzz=\([-0-9]*\).*/\1/p'; }
+safe_name() { echo "$1" | tr -cd 'A-Za-z0-9._ -'; }
+write_config() {
+  tmp="$CONFIG.tmp"
+  {
+    echo "# TouchFuzz persistent configuration"
+    echo "DEVICE_NAME='$1'"
+    echo "DEVICE_PATH='$2'"
+    echo "FUZZ_X='$3'"
+    echo "FUZZ_Y='$4'"
+    echo "ORIGINAL_X='$5'"
+    echo "ORIGINAL_Y='$6'"
+  } > "$tmp" && chmod 0644 "$tmp" && mv -f "$tmp" "$CONFIG"
+}
+
+case "$1" in
+  save)
+    path=$2; name=$(safe_name "$3"); x=$4; y=$5
+    [ -n "$path" ] && [ -n "$name" ] && [ -n "$x" ] && [ -n "$y" ] || { echo "Error: incomplete save request."; exit 2; }
+    old_x=$(axis_fuzz "$path" 0x35); old_y=$(axis_fuzz "$path" 0x36)
+    original_x=$old_x; original_y=$old_y
+    if [ -f "$CONFIG" ]; then
+      . "$CONFIG"
+      if [ "$DEVICE_NAME" = "$name" ] && [ -n "$ORIGINAL_X" ] && [ -n "$ORIGINAL_Y" ]; then original_x=$ORIGINAL_X; original_y=$ORIGINAL_Y; fi
+    fi
+    [ -n "$original_x" ] && [ -n "$original_y" ] || { echo "Error: unable to capture original fuzz values."; exit 1; }
+    write_config "$name" "$path" "$x" "$y" "$original_x" "$original_y" || exit 1
+    "$HELPER" "$path" 0x35 "$x" && "$HELPER" "$path" 0x36 "$y"
+    ;;
+  restore)
+    path=$2; name=$(safe_name "$3")
+    [ -f "$CONFIG" ] || { echo "Error: configuration is missing."; exit 1; }
+    . "$CONFIG"
+    [ "$DEVICE_NAME" = "$name" ] && [ -n "$ORIGINAL_X" ] && [ -n "$ORIGINAL_Y" ] || { echo "Error: original values are unknown for this device."; exit 1; }
+    "$HELPER" "$path" 0x35 "$ORIGINAL_X" && "$HELPER" "$path" 0x36 "$ORIGINAL_Y" || exit 1
+    write_config "$name" "$path" "$ORIGINAL_X" "$ORIGINAL_Y" "$ORIGINAL_X" "$ORIGINAL_Y"
+    ;;
+  *) echo "Usage: touchfuzz-config save|restore DEVICE NAME [X Y]"; exit 2 ;;
+esac

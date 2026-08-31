@@ -1,0 +1,6 @@
+id=touchfuzz
+name=TouchFuzz
+version=1.0.1
+versionCode=10001
+author=TouchFuzz Project
+description=Rooted Android touchscreen micro-jitter and oversensitivity tuner. Verified on Google Pixel Fold (felix).

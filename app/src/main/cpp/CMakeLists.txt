@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(fuzzctl C)
+add_executable(fuzzctl fuzzctl.c)
+target_compile_options(fuzzctl PRIVATE -Wall -Wextra -Werror -O2)
+set_target_properties(fuzzctl PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")

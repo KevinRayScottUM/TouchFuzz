@@ -1,0 +1,15 @@
+#!/sbin/sh
+
+umask 022
+OUTFD=$2
+ZIPFILE=$3
+
+ui_print() { echo "ui_print $1" >&$OUTFD; echo "ui_print" >&$OUTFD; }
+fail() { ui_print "$1"; exit 1; }
+
+mount /data 2>/dev/null
+[ -f /data/adb/magisk/util_functions.sh ] || fail "Magisk 20.4 or newer is required."
+. /data/adb/magisk/util_functions.sh
+[ "$MAGISK_VER_CODE" -ge 20400 ] || fail "Magisk 20.4 or newer is required."
+install_module
+exit 0
